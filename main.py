@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 app = FastAPI()
 
@@ -43,6 +44,14 @@ def rename_item1():
             return {"success": "Item renamed"}
     return {"error": "Item not found"}
 
+# get the array of items and write it into a txt file in this folder, check if the content changes, if so, return the new content in the same file
+
+
+def write_items_to_file():
+    with open("items.txt", "w") as f:
+        f.write(str(items))
+    return {"success": "Items written to file"}
+
 
 @app.get("/")
 def read_root():
@@ -53,6 +62,7 @@ def read_root():
 @app.get("/items")
 async def get_items():
     rename_item1()
+    write_items_to_file()
     return items
 
 

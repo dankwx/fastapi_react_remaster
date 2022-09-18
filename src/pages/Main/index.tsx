@@ -18,9 +18,9 @@ export default function Main() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        id: 7,
-        name: "item1",
-        price: 11.5,
+        id: 10,
+        name: "pastel de carne",
+        price: 12.5,
       }),
     })
       .then((res) => res.json())
