@@ -1,4 +1,8 @@
-from fastapi import FastAPI
+from cgitb import reset
+import csv
+import codecs
+from unittest import removeResult
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
@@ -21,84 +25,63 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-items = [
-    {"id": 1,
-     "name": "item1",
-     "price": 10.00
-     },
-    {"id": 2,
-     "name": "item2",
-     "price": 20.00
-     },
-    {"id": 3,
-     "name": "item3",
-     "price": 30.00
-     }
-]
+
+dataArray = []
+# verify if there are duplicate content in row 'nome', if so, remove the duplicate and keep the first one
 
 
-def rename_item1():
-    for i in range(len(items)):
-        if items[i]["name"] == "item1":
-            items[i]["name"] = "item1_renamed"
-            return {"success": "Item renamed"}
-    return {"error": "Item not found"}
-
-# get the array of items and write it into a txt file in this folder, check if the content changes, if so, return the new content in the same file
-
-
-def write_items_to_file():
-    with open("items.txt", "w") as f:
-        f.write(str(items))
-    return {"success": "Items written to file"}
+def removeDuplicate(dataArray):
+    for i in range(len(dataArray)):
+        for j in range(i+1, len(dataArray)):
+            if dataArray[i]['nome'] == dataArray[j]['nome']:
+                dataArray.pop(j)
+    return dataArray
 
 
 @app.get("/")
 def read_root():
-    rename_item1()
     return {"Hello": "World"}
 
 
-@app.get("/items")
-async def get_items():
-    rename_item1()
-    write_items_to_file()
-    return items
+@app.post("/upload")
+def upload(file: UploadFile = File(...)):
+    csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
+    data = {}
+    for rows in csvReader:
+        key = rows['Id']  # Assuming a column named 'Id' to be the primary key
+        data[key] = rows
+
+    file.file.close()
+    prt = os.path.dirname(os.path.abspath(__file__))
+    dataArray.append(data)
+
+# get the data from csv file received from frontend and save it to a txt file
 
 
-@app.get("/items/{item_id}")
-async def get_item(item_id: int):
-    rename_item1()
-    for item in items:
-        if item["id"] == item_id:
-            return item
-    return {"error": "Item not found"}
+@app.post("/save")
+def save(file: UploadFile = File(...)):
+    csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
+    data = {}
+    for rows in csvReader:
+        key = rows['Id']  # Assuming a column named 'Id' to be the primary key
+        data[key] = rows
+
+    file.file.close()
+    prt = os.path.dirname(os.path.abspath(__file__))
+    with open(prt + '/data.txt', 'w') as outfile:
+        outfile.write(str(data))
+    return data
 
 
-@app.post("/items")
-async def create_item(item: dict):
-    items.append(item)
-    return item
-
-
-@app.put("/items/{item_id}")
-async def update_item(item_id: int, item: dict):
-    for i in range(len(items)):
-        if items[i]["id"] == item_id:
-            items[i] = item
-            return item
-    return {"error": "Item not found"}
-
-
-@app.delete("/items/{item_id}")
-async def delete_item(item_id: int):
-    for i in range(len(items)):
-        if items[i]["id"] == item_id:
-            items.pop(i)
-            return {"success": "Item deleted"}
-    return {"error": "Item not found"}
-
-# function that checks if there are a item named "item1" in the list, if so, rename it to "item1_renamed"
+@app.get("/data")
+def get_data():
+    # content is like: {'1': {'Id': '1', 'Name': 'John', 'Age': '20'}, '2': {'Id': '2', 'Name': 'Peter', 'Age': '21'}}, so we need to convert it to a list
+    content = dataArray[0]
+    content_list = []
+    for key in content:
+        content_list.append(content[key])
+    removeDuplicate(content_list)
+    return content_list
 
 
 if __name__ == "__main__":

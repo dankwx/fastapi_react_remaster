@@ -4,58 +4,92 @@ import styles from "./Main.module.scss";
 export default function Main() {
   const [data, setData] = useState<any[]>([]);
 
-  // get data from "http://localhost:8000/items")
-  useEffect(() => {
-    fetch("http://localhost:8000/items")
-      .then((res) => res.json())
-      .then((data) => setData(data));
-  }, []);
+  function UploadCsv() {
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isFilePicked, setIsFilePicked] = useState(false);
 
-  const postData = () => {
-    fetch("http://localhost:8000/items", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: 10,
-        name: "pastel de carne",
-        price: 12.5,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => setData(data))
-      .then(() => {
-        fetch("http://localhost:8000/items")
-          .then((res) => res.json())
-          .then((data) => setData(data));
+    const changeHandler = (event: any) => {
+      setSelectedFile(event.target.files[0]);
+      setIsFilePicked(true);
+    };
+
+    const handleSubmission = () => {
+      if (!isFilePicked) {
+        alert("Please select a file to upload");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", selectedFile!);
+
+      fetch("http://localhost:8000/upload", {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log(data);
+          setData(data);
+        })
+        // refresh data
+        .then(() => {
+          fetch("http://localhost:8000/data")
+            .then((response) => response.json())
+            .then((data) => {
+              console.log(data);
+              setData(data);
+            });
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    };
+    return (
+      <div>
+        <input type="file" accept=".csv" onChange={changeHandler} />
+        <div>
+          <button onClick={handleSubmission}>Upload</button>
+        </div>
+      </div>
+    );
+  }
+  // get data from 'localhost:8000/data'
+  useEffect(() => {
+    fetch("http://localhost:8000/data")
+      .then((response) => response.json())
+      .then((data) => {
+        // convert the object to array
+        setData(Object.values(data));
+        console.log(data.type);
+      })
+      .catch((error) => {
+        console.error(error);
       });
-  };
+  }, []);
 
   return (
     <div className={styles.main}>
-      <h1>Items</h1>
-      {data.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>id</th>
-              <th>name</th>
-              <th>price</th>
+      <h1>Enter CSV file:</h1>
+      <UploadCsv />
+      <table>
+        <thead>
+          <tr>
+            <th>id</th>
+            <th>nome</th>
+            <th>idade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((dataArray, key) => (
+            // have unique key
+            <tr key={key.toString()}>
+              <td>{dataArray.Id}</td>
+              <td>{dataArray.nome}</td>
+              <td>{dataArray.idade}</td>
             </tr>
-          </thead>
-          <tbody>
-            {data.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.name}</td>
-                <td>{item.price}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <button onClick={postData}>Post Data</button>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
